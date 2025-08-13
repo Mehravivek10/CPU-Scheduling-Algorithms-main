@@ -8,6 +8,7 @@ using namespace std;
 /** Global Constants **/
 const string TRACE = "trace";
 const string SHOW_STATISTICS = "stats";
+const string JSON_OUTPUT = "json";
 const string ALGORITHMS[9] = {"", "FCFS", "RR-", "SPN", "SRT", "HRRN", "FB-1", "FB-2i", "AGING"};
 
 bool sortByServiceTime(const tuple<string, int, int> &a, const tuple<string, int, int> &b)
@@ -72,6 +73,100 @@ void fillInWaitTime(){
                 timeline[k][i] = '.';
         }
     }
+}
+
+// JSON helpers
+string algorithmLabel(int algorithm_index){
+    int algorithm_id = algorithms[algorithm_index].first - '0';
+    if (algorithm_id == 2) {
+        return ALGORITHMS[algorithm_id] + to_string(algorithms[algorithm_index].second);
+    }
+    return ALGORITHMS[algorithm_id];
+}
+
+string timelineRowStringForProcess(int process_index){
+    string row;
+    row.reserve(max(0, last_instant));
+    for(int t = 0; t < last_instant; t++){
+        row.push_back(timeline[t][process_index]);
+    }
+    return row;
+}
+
+void printJsonHeader(){
+    cout << "{\n";
+    cout << "  \"operation\": \"json\",\n";
+    cout << "  \"lastInstant\": " << last_instant << ",\n";
+    cout << "  \"processCount\": " << process_count << ",\n";
+    cout << "  \"processes\": [\n";
+    for(int i = 0; i < process_count; i++){
+        cout << "    {\"name\": \"" << getProcessName(processes[i]) << "\", \"arrival\": " << getArrivalTime(processes[i]) << ", \"value\": " << get<2>(processes[i]) << "}";
+        if(i != process_count - 1) cout << ",";
+        cout << "\n";
+    }
+    cout << "  ],\n";
+    cout << "  \"results\": [\n";
+}
+
+void printJsonFooter(){
+    cout << "  ]\n";
+    cout << "}\n";
+}
+
+void printJsonForAlgorithm(int algorithm_index){
+    // compute means
+    long long turn_sum = 0;
+    double norm_sum = 0.0;
+    for(int i=0;i<process_count;i++){
+        turn_sum += turnAroundTime[i];
+        norm_sum += normTurn[i];
+    }
+    double mean_turn = process_count > 0 ? (1.0 * turn_sum / process_count) : 0.0;
+    double mean_norm = process_count > 0 ? (1.0 * norm_sum / process_count) : 0.0;
+
+    cout.setf(std::ios::fixed); cout<<setprecision(2);
+    cout << "    {\n";
+    cout << "      \"algorithm\": \"" << algorithmLabel(algorithm_index) << "\",\n";
+    cout << "      \"timeline\": [\n";
+    for(int i=0;i<process_count;i++){
+        string row = timelineRowStringForProcess(i);
+        // Escape backslashes and quotes if any (not expected), and escape newlines if any
+        for(char &c : row){ if(c=='\"'){ c='\''; } }
+        cout << "        {\"process\": \"" << getProcessName(processes[i]) << "\", \"slots\": \"" << row << "\"}";
+        if(i != process_count - 1) cout << ",";
+        cout << "\n";
+    }
+    cout << "      ],\n";
+
+    // finishTime
+    cout << "      \"finishTime\": [";
+    for(int i=0;i<process_count;i++){
+        cout.unsetf(std::ios::floatfield);
+        cout << finishTime[i];
+        if(i != process_count - 1) cout << ", ";
+    }
+    cout << "],\n";
+
+    // turnAroundTime
+    cout << "      \"turnAroundTime\": [";
+    for(int i=0;i<process_count;i++){
+        cout << turnAroundTime[i];
+        if(i != process_count - 1) cout << ", ";
+    }
+    cout << "],\n";
+
+    // normTurn
+    cout.setf(std::ios::fixed); cout<<setprecision(2);
+    cout << "      \"normTurn\": [";
+    for(int i=0;i<process_count;i++){
+        cout << normTurn[i];
+        if(i != process_count - 1) cout << ", ";
+    }
+    cout << "],\n";
+
+    cout << "      \"meanTurnAround\": " << mean_turn << ",\n";
+    cout << "      \"meanNormTurn\": " << mean_norm << "\n";
+    cout << "    }";
 }
 
 void firstComeFirstServe()
@@ -429,9 +524,9 @@ void printTurnAroundTime()
         sum += turnAroundTime[i];
     }
     if((1.0 * sum / turnAroundTime.size())>=10)
-		printf("%2.2f|\n",(1.0 * sum / turnAroundTime.size()));
+        printf("%2.2f|\n",(1.0 * sum / turnAroundTime.size()));
     else
-	 	printf(" %2.2f|\n",(1.0 * sum / turnAroundTime.size()));
+        printf(" %2.2f|\n",(1.0 * sum / turnAroundTime.size()));
 }
 
 void printNormTurn()
@@ -449,7 +544,7 @@ void printNormTurn()
 
     if( (1.0 * sum / normTurn.size()) >=10 )
         printf("%2.2f|\n",(1.0 * sum / normTurn.size()));
-	else
+    else
         printf(" %2.2f|\n",(1.0 * sum / normTurn.size()));
 }
 void printStats(int algorithm_index)
@@ -525,6 +620,20 @@ void execute_algorithm(char algorithm_id, int quantum,string operation)
 int main()
 {
     parse();
+
+    if (operation == JSON_OUTPUT) {
+        printJsonHeader();
+        for (int idx = 0; idx < (int)algorithms.size(); idx++)
+        {
+            clear_timeline();
+            execute_algorithm(algorithms[idx].first, algorithms[idx].second, operation);
+            printJsonForAlgorithm(idx);
+            if (idx != (int)algorithms.size() - 1) cout << ",\n"; else cout << "\n";
+        }
+        printJsonFooter();
+        return 0;
+    }
+
     for (int idx = 0; idx < (int)algorithms.size(); idx++)
     {
         clear_timeline();
