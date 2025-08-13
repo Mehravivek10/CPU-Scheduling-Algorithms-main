@@ -14,6 +14,8 @@ An implementation of various CPU scheduling algorithms in C++. The algorithms in
     - [Aging](#aging)
   - [Installation](#installation)
   - [Input Format](#input-format)
+  - [JSON Mode](#json-mode)
+  - [Web UI](#web-ui)
   - [Contributors](#contributors)
 
 ## Algorithms
@@ -72,18 +74,18 @@ An implementation of various CPU scheduling algorithms in C++. The algorithms in
 ### Aging
 
 - Xinu is an operating system developed at Purdue University. The scheduling invariant in Xinu assumes that at any
-time, the highest priority process eligible for CPU service is executing, with round-robin scheduling for processes of
-equal priority. Under this scheduling policy, the processes with the highest priority will always be executing. As a
-result, all the processes with lower priority will never get CPU time. As a result, starvation is produced in Xinu when
-we have two or more processes eligible for execution that have different priorities. For ease of discussion, we call the
-set of processes in the ready list and the current process as the eligible processes.
+ time, the highest priority process eligible for CPU service is executing, with round-robin scheduling for processes of
+ equal priority. Under this scheduling policy, the processes with the highest priority will always be executing. As a
+ result, all the processes with lower priority will never get CPU time. As a result, starvation is produced in Xinu when
+ we have two or more processes eligible for execution that have different priorities. For ease of discussion, we call the
+ set of processes in the ready list and the current process as the eligible processes.
 
 - To overcome starvation, an aging scheduler may be used. On each rescheduling operation, a timeout for instance, the
-scheduler increases the priority of all the ready processes by a constant number. This avoids starvation as each ready
-process can be passed over by the scheduler only a finite number of times before it has the highest priority.
+ scheduler increases the priority of all the ready processes by a constant number. This avoids starvation as each ready
+ process can be passed over by the scheduler only a finite number of times before it has the highest priority.
 
 - Each process has an initial priority that is assigned to it at process creation. Every time the scheduler is called it takes
-the following steps.
+ the following steps.
     - The priority of the current process is set to the initial priority assigned to it.
     - The priorities of all the ready processes (not the current process) are incremented by 1.
     - The scheduler choses the highest priority process from among all the eligible processes.
@@ -103,18 +105,18 @@ sudo apt-get install g++ make
 ## Input Format
 - Line 1: "trace" or "stats"
 - Line 2: a comma-separated list telling which CPU scheduling policies to be analyzed/visualized along with
-their parameters, if applicable. Each algorithm is represented by a number as listed in the
-introduction section and as shown in the attached testcases.
-Round Robin and Aging have a parameter specifying the quantum q to be used. Therefore, a policy
-entered as 2-4 means Round Robin with q=4. Also, policy 8-1 means Aging with q=1.
- 1. FCFS (First Come First Serve)
- 2. RR (Round Robin)
- 3. SPN (Shortest Process Next)
- 4. SRT (Shortest Remaining Time)
- 5. HRRN (Highest Response Ratio Next)
- 6. FB-1, (Feedback where all queues have q=1)
- 7. FB-2i, (Feedback where q= 2i)
- 8. Aging
+ their parameters, if applicable. Each algorithm is represented by a number as listed in the
+ introduction section and as shown in the attached testcases.
+ Round Robin and Aging have a parameter specifying the quantum q to be used. Therefore, a policy
+ entered as 2-4 means Round Robin with q=4. Also, policy 8-1 means Aging with q=1.
+  1. FCFS (First Come First Serve)
+  2. RR (Round Robin)
+  3. SPN (Shortest Process Next)
+  4. SRT (Shortest Remaining Time)
+  5. HRRN (Highest Response Ratio Next)
+  6. FB-1, (Feedback where all queues have q=1)
+  7. FB-2i, (Feedback where q= 2i)
+  8. Aging
 - Line 3: An integer specifying the last instant to be used in your simulation and to be shown on the timeline.
 - Line 4: An integer specifying the number of processes to be simulated.
 - Line 5: Start of description of processes. Each process is to be described on a separate line. For algorithms 1 through 7, each process is described using a comma-separated list specifying:
@@ -131,6 +133,34 @@ entered as 2-4 means Round Robin with q=4. Also, policy 8-1 means Aging with q=1
 - Processes are assumed to be sorted based on the arrival time. If two processes have the same arrival time, then the one with the lower priority is assumed to arrive first.
 > Check the attached [testcases](https://github.com/yousefkotp/CPU-Scheduling-Algorithms/tree/main/testcases) for more details.
 
+## JSON Mode
+The executable now supports a third mode named `json` to output structured results for UIs.
+
+Example input:
+```
+json 1,2-4,3 20 3
+P1,0,3
+P2,2,5
+P3,3,2
+```
+This prints a JSON document containing the processes, per-algorithm timelines, finish times, turnaround times, normTurn and their means.
+
+## Web UI
+A minimal web server and interactive UI are provided in `ui/`.
+
+- Start the server:
+```bash
+cd ui
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn server:app --host 0.0.0.0 --port 8000
+```
+- Open the browser at `http://localhost:8000` to access the scheduler visualizer.
+
+The UI lets you:
+- Configure algorithms, last instant, process list
+- Run the simulator and see a color timeline grid and stats
+- Compare multiple algorithms side-by-side
 
 ## Contributors
 
